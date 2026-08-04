@@ -41,11 +41,11 @@ jobs:
         id: meta
         run: |
           node -p "'version=' + require('./package.json').version" >> "$GITHUB_OUTPUT"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: native-arm64
           path: vendor/darwin-arm64
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: native-x64
           path: vendor/darwin-x64
