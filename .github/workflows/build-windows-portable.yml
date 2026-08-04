@@ -10,11 +10,11 @@ jobs:
   package:
     runs-on: windows-2025
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.9.0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: pnpm install --frozen-lockfile
@@ -52,7 +52,7 @@ jobs:
           $artifact = Get-Item "dist/PodcastTranscriber-$version-Windows-Full.zip"
           $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $artifact.FullName).Hash.ToLowerInvariant()
           "$hash  $($artifact.Name)" | Set-Content -Encoding ascii dist/SHA256SUMS-Windows.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: PodcastTranscriber-${{ steps.meta.outputs.version }}-Windows-Full
           path: |
