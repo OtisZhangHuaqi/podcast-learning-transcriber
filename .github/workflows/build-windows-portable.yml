@@ -50,7 +50,7 @@ jobs:
           $artifact = Get-Item "dist/PodcastTranscriber-$version-Windows-Full.zip"
           $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $artifact.FullName).Hash.ToLowerInvariant()
           "$hash  $($artifact.Name)" | Set-Content -Encoding ascii dist/SHA256SUMS-Windows.txt
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: PodcastTranscriber-${{ steps.meta.outputs.version }}-Windows-Full
           path: |

@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build native tools
         run: bash scripts/prepare-macos-native.sh "${{ matrix.arch }}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: native-${{ matrix.arch }}
           path: vendor/darwin-${{ matrix.arch }}
@@ -71,7 +71,7 @@ jobs:
           rm -rf vendor/models vendor/darwin-arm64 vendor/darwin-x64 node_modules .pnpm
           hdiutil create -volname "播客转录助手 $VERSION" -srcfolder dist/dmg-root -ov -format UDZO "dist/PodcastTranscriber-$VERSION-macOS-Universal-Full.dmg"
           shasum -a 256 "dist/PodcastTranscriber-$VERSION-macOS-Universal-Full.dmg" > "dist/SHA256SUMS.txt"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: PodcastTranscriber-${{ steps.meta.outputs.version }}-macOS-Universal
           path: |
