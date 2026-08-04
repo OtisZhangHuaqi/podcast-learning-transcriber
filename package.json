@@ -5,6 +5,7 @@
   "main": "src/main.js",
   "author": "Podcast Learning Transcriber contributors",
   "license": "MIT",
+  "packageManager": "pnpm@11.9.0",
   "keywords": ["podcast", "transcription", "whisper", "electron", "knowledge-base", "deepseek"],
   "scripts": {
     "start": "electron .",
