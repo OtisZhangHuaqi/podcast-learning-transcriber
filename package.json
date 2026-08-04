@@ -1,0 +1,66 @@
+{
+  "name": "podcast-knowledge-transcriber",
+  "version": "0.4.1",
+  "description": "Local-first podcast and video transcription desktop app with a personal knowledge base",
+  "main": "src/main.js",
+  "author": "Podcast Learning Transcriber contributors",
+  "license": "MIT",
+  "keywords": ["podcast", "transcription", "whisper", "electron", "knowledge-base", "deepseek"],
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.js",
+    "build:win": "electron-builder --win portable",
+    "build:mac": "electron-builder --mac zip --universal",
+    "build:mac:dir": "electron-builder --mac --universal --dir"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.2.5",
+    "ffmpeg-static": "^5.2.0"
+  },
+  "devDependencies": {
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.podcastlearning.transcriber",
+    "productName": "播客转录助手",
+    "compression": "store",
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/ffmpeg-static/**"
+    ],
+    "files": [
+      "src/**/*",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "artifactName": "播客转录助手-${version}-便携版.${ext}",
+      "extraResources": [
+        { "from": "vendor/whisper", "to": "whisper", "filter": ["**/*"] },
+        { "from": "vendor/models", "to": "models", "filter": ["ggml-small.bin", "ggml-medium.bin", "ggml-large-v3-turbo.bin"] },
+        { "from": "vendor/yt-dlp", "to": "yt-dlp", "filter": ["yt-dlp.exe"] },
+        { "from": "THIRD_PARTY_NOTICES.md", "to": "THIRD_PARTY_NOTICES.md" }
+      ]
+    },
+    "mac": {
+      "target": [{ "target": "zip", "arch": ["universal"] }],
+      "category": "public.app-category.education",
+      "identity": null,
+      "hardenedRuntime": false,
+      "x64ArchFiles": "Contents/Resources/**",
+      "artifactName": "PodcastTranscriber-${version}-macOS-Universal.${ext}",
+      "extraResources": [
+        { "from": "vendor/darwin-arm64", "to": "darwin-arm64", "filter": ["**/*"] },
+        { "from": "vendor/darwin-x64", "to": "darwin-x64", "filter": ["**/*"] },
+        { "from": "vendor/models", "to": "models", "filter": ["ggml-small.bin", "ggml-medium.bin", "ggml-large-v3-turbo.bin"] },
+        { "from": "THIRD_PARTY_NOTICES.md", "to": "THIRD_PARTY_NOTICES.md" },
+        { "from": "docs/MACOS_FIRST_OPEN.txt", "to": "首次打开说明.txt" }
+      ]
+    },
+    "portable": {
+      "requestExecutionLevel": "user"
+    }
+  }
+}

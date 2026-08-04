@@ -1,0 +1,60 @@
+name: Build Windows release package
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Read package version
+        id: meta
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          "version=$version" >> $env:GITHUB_OUTPUT
+      - name: Bundle all local models
+        shell: bash
+        run: bash scripts/prepare-models.sh
+      - name: Bundle Windows native tools
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force vendor/whisper, vendor/yt-dlp, vendor/whisper-download | Out-Null
+          Invoke-WebRequest 'https://github.com/ggerganov/whisper.cpp/releases/download/v1.9.1/whisper-bin-x64.zip' -OutFile vendor/whisper.zip
+          Expand-Archive vendor/whisper.zip vendor/whisper-download -Force
+          Copy-Item vendor/whisper-download/* vendor/whisper -Recurse -Force
+          Invoke-WebRequest 'https://github.com/yt-dlp/yt-dlp/releases/download/2026.07.04/yt-dlp.exe' -OutFile vendor/yt-dlp/yt-dlp.exe
+          if (-not (Get-ChildItem vendor/whisper -Recurse -Filter whisper-cli.exe)) { throw 'whisper-cli.exe not found' }
+          if (-not (Test-Path vendor/yt-dlp/yt-dlp.exe)) { throw 'yt-dlp.exe not found' }
+      - name: Unit tests
+        run: pnpm test
+      - name: Build Windows runnable directory
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: pnpm exec electron-builder --win --x64 --dir
+      - name: Create ZIP and checksum
+        shell: pwsh
+        run: |
+          if (-not (Test-Path dist/win-unpacked/'播客转录助手.exe')) { throw 'Windows runnable directory not found' }
+          $version = '${{ steps.meta.outputs.version }}'
+          7z a -tzip -mx=1 "dist/PodcastTranscriber-$version-Windows-Full.zip" './dist/win-unpacked/*'
+          $artifact = Get-Item "dist/PodcastTranscriber-$version-Windows-Full.zip"
+          $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $artifact.FullName).Hash.ToLowerInvariant()
+          "$hash  $($artifact.Name)" | Set-Content -Encoding ascii dist/SHA256SUMS-Windows.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PodcastTranscriber-${{ steps.meta.outputs.version }}-Windows-Full
+          path: |
+            dist/PodcastTranscriber-${{ steps.meta.outputs.version }}-Windows-Full.zip
+            dist/SHA256SUMS-Windows.txt
+          compression-level: 0
+          if-no-files-found: error

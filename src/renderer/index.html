@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data: https:;" />
+    <title>播客转录助手</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+          <div>
+            <h1>播客转录助手</h1>
+            <p>链接进去，知识出来</p>
+          </div>
+        </div>
+        <button id="settingsButton" class="icon-button" type="button" aria-label="打开设置">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5Zm7.43-2.53c.04-.32.07-.64.07-.97s-.03-.66-.08-.98l2.12-1.65-2-3.46-2.5 1a7.56 7.56 0 0 0-1.69-.98L15 3.27h-4l-.4 2.66c-.61.25-1.18.58-1.7.98l-2.49-1-2 3.46 2.12 1.65a6.72 6.72 0 0 0 0 1.96l-2.12 1.65 2 3.46 2.5-1c.51.4 1.08.73 1.69.98l.4 2.66h4l.4-2.66c.61-.25 1.18-.58 1.7-.98l2.49 1 2-3.46-2.16-1.66Z"/></svg>
+        </button>
+      </header>
+
+      <main>
+        <section class="hero">
+          <div class="eyebrow">本地、私密、可追溯</div>
+          <h2>把一期播客，变成可搜索的文字。</h2>
+          <p>支持播客与公开视频链接，自动完成字幕提取、本地转录、结构化学习纪要，并让本地知识库基于多期节目回答问题。</p>
+        </section>
+
+        <section class="guide-card" aria-labelledby="guideTitle">
+          <div class="guide-header">
+            <div>
+              <p>当前版本 0.4.1 · Windows / macOS Universal</p>
+              <h2 id="guideTitle">适用范围与使用方法</h2>
+            </div>
+            <span class="local-badge">音频本地处理</span>
+          </div>
+
+          <div class="capability-grid">
+            <div class="capability-block">
+              <h3>可以处理</h3>
+              <div class="platform-tags" aria-label="支持的平台">
+                <span>Apple Podcasts</span><span>Spotify</span><span>小宇宙</span>
+                <span>公开 RSS</span><span>YouTube</span><span>哔哩哔哩*</span>
+              </div>
+              <p>* B站支持公开可访问的视频、BV链接与分P链接。VPN、地区限制、登录内容或B站HTTP 412风控可能导致解析失败。</p>
+            </div>
+            <div class="capability-block">
+              <h3>可以交付</h3>
+              <ul>
+                <li>原始与校正版 TXT/SRT 逐字稿</li>
+                <li>结构化学习纪要，也可作为总结式纪要</li>
+                <li>观点、概念、案例和数据的原文证据映射</li>
+                <li>跨不同节目的本地知识库问答与时间戳引用</li>
+              </ul>
+            </div>
+          </div>
+
+          <details class="usage-details">
+            <summary>查看完整使用步骤与输出说明</summary>
+            <ol class="usage-steps">
+              <li><strong>粘贴链接</strong><span>提交播客单集、YouTube或公开B站视频链接，然后点击“识别节目”。</span></li>
+              <li><strong>检查识别结果</strong><span>系统先查找RSS与现成字幕；没有字幕时才提取音频并调用本地Whisper。</span></li>
+              <li><strong>选择处理方案</strong><span>使用本机推荐配置，或调整模型、线程、并行切片、DeepSeek整理和联网专名核查。</span></li>
+              <li><strong>加入后台队列</strong><span>任务会依次处理；当前任务运行时仍可继续提交其他节目。失败后可直接按原链接与设置重试。</span></li>
+              <li><strong>读取结果</strong><span>每期节目建立独立文件夹，保存音频、逐字稿、校正记录及《学习纪要.md/.json》。</span></li>
+              <li><strong>向知识库提问</strong><span>在页面下方输入跨节目问题。回答只使用本地文件，并显示文件、片段和时间范围；资料不足时拒绝回答。</span></li>
+            </ol>
+            <div class="boundary-note">
+              <strong>使用边界：</strong>请只处理你有权访问和使用的内容。音频不会发送给DeepSeek；启用整理、纪要或问答时，只发送必要的元数据和文本片段。
+            </div>
+          </details>
+        </section>
+
+        <section class="input-card">
+          <label for="podcastUrl">播客或视频链接</label>
+          <div class="url-row">
+            <input id="podcastUrl" type="url" placeholder="粘贴 Apple、Spotify、YouTube、小宇宙或 RSS 链接" autocomplete="off" />
+            <button id="inspectButton" class="secondary-button" type="button">识别节目</button>
+          </div>
+          <p id="inputHint" class="field-hint">系统会自动反查公开RSS；视频没有RSS时会尝试直接提取平台字幕或音频。</p>
+
+          <div id="episodePreview" class="episode-preview hidden">
+            <div class="source-badge" id="previewPlatform">RSS</div>
+            <div class="episode-copy">
+              <p id="previewShow" class="episode-show"></p>
+              <h3 id="previewTitle"></h3>
+              <div class="episode-meta">
+                <span id="previewDate"></span>
+                <span id="previewDuration"></span>
+                <span id="previewSource"></span>
+              </div>
+            </div>
+            <div id="previewTranscriptBadge" class="availability-badge"></div>
+          </div>
+
+          <section class="performance-panel" aria-labelledby="performanceTitle">
+            <div class="performance-header">
+              <div>
+                <p>根据本机硬件自动配置</p>
+                <h3 id="performanceTitle">转录性能方案</h3>
+              </div>
+              <div class="performance-actions">
+                <span id="profileBadge" class="recommended-badge">推荐方案</span>
+                <button id="resetPerformanceButton" class="mini-button" type="button">恢复推荐</button>
+              </div>
+            </div>
+            <p id="hardwareSummary" class="hardware-summary">正在检测CPU、内存与可用推理后端…</p>
+            <p id="recommendationSummary" class="recommendation-summary"></p>
+            <div class="performance-grid">
+              <div class="option-block">
+                <label for="backendSelect">计算后端</label>
+                <select id="backendSelect"></select>
+              </div>
+              <div class="option-block">
+                <label for="workerSelect">并行进程</label>
+                <select id="workerSelect"></select>
+              </div>
+              <div class="option-block">
+                <label for="threadSelect">每进程CPU线程</label>
+                <select id="threadSelect"></select>
+              </div>
+              <div class="option-block">
+                <label for="chunkSelect">长音频切片长度</label>
+                <select id="chunkSelect"></select>
+              </div>
+            </div>
+            <label class="switch-option compact-switch">
+              <span>
+                <strong>长音频智能切片</strong>
+                <small>超过30分钟时切片，保留20秒重叠并自动合并时间戳</small>
+              </span>
+              <input id="segmentationEnabled" type="checkbox" checked />
+              <span class="switch" aria-hidden="true"></span>
+            </label>
+            <div id="performanceImpact" class="performance-impact"></div>
+          </section>
+
+          <div class="options-row">
+            <div class="option-block">
+              <label for="modelSelect">本地转录质量</label>
+              <select id="modelSelect">
+                <option value="small">标准 · Small 多语言（已内置）</option>
+                <option value="medium">较高 · Medium 多语言（首次使用需下载）</option>
+                <option value="turbo">最高 · Large v3 Turbo（首次使用需下载）</option>
+              </select>
+            </div>
+            <label class="switch-option">
+              <span>
+                <strong>DeepSeek 智能整理</strong>
+                <small>背景词表与转录稿校正</small>
+              </span>
+              <input id="deepSeekEnabled" type="checkbox" checked />
+              <span class="switch" aria-hidden="true"></span>
+            </label>
+            <label class="switch-option">
+              <span>
+                <strong>联网核查专有名词</strong>
+                <small>仅核查疑似错识的人名、公司与术语，并保留来源</small>
+              </span>
+              <input id="onlineFactCheck" type="checkbox" />
+              <span class="switch" aria-hidden="true"></span>
+            </label>
+            <label class="switch-option">
+              <span>
+                <strong>完成后生成学习纪要</strong>
+                <small>分段提取、证据验证并保留逐字稿行号</small>
+              </span>
+              <input id="generateSummary" type="checkbox" />
+              <span class="switch" aria-hidden="true"></span>
+            </label>
+          </div>
+
+          <button id="startButton" class="primary-button" type="button" disabled>
+            <span>加入处理队列</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+        </section>
+
+        <section id="taskSection" class="task-section hidden">
+          <div class="task-section-header">
+            <div><p>后台处理</p><h2>任务队列</h2></div>
+            <span id="queueCount" class="queue-count">0 个任务</span>
+          </div>
+          <div id="taskList" class="task-list"></div>
+          <p class="field-hint">暂停采用安全检查点：当前下载、API 请求或 Whisper 切片完成后暂停，继续时从下一检查点恢复，不破坏字幕和输出文件。</p>
+        </section>
+
+        <section class="knowledge-card">
+          <div class="knowledge-header">
+            <div>
+              <p>跨节目检索</p>
+              <h2>本地知识库问答</h2>
+            </div>
+            <button id="refreshKnowledgeButton" class="secondary-button compact" type="button">更新索引</button>
+          </div>
+          <p id="knowledgeStats" class="knowledge-stats">正在读取本地知识库…</p>
+          <label for="knowledgeQuestion">向所有已保存的播客内容提问</label>
+          <textarea id="knowledgeQuestion" rows="4" placeholder="例如：这些节目对个人在 AI 时代应该培养什么能力有哪些共同观点？"></textarea>
+          <button id="askKnowledgeButton" class="primary-button" type="button">
+            <span>基于本地资料回答</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+          </button>
+          <div id="knowledgeAnswer" class="knowledge-answer hidden">
+            <div class="knowledge-answer-label">回答</div>
+            <pre id="knowledgeAnswerText"></pre>
+            <div id="knowledgeSources" class="knowledge-sources hidden">
+              <strong>本地来源</strong>
+              <ul id="knowledgeSourceList"></ul>
+            </div>
+          </div>
+          <p class="knowledge-boundary">只使用当前转录保存目录中的 TXT、Markdown、SRT 和 VTT。先进行上下文化检索和证据重排，再按文件与时间戳引用；资料不足时明确拒答，不搜索网页。</p>
+        </section>
+      </main>
+    </div>
+
+    <div id="settingsOverlay" class="overlay hidden">
+      <section class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="settings-header">
+          <div><p>偏好设置</p><h2 id="settingsTitle">让它按照你的方式工作</h2></div>
+          <button id="closeSettingsButton" class="icon-button close-button" type="button" aria-label="关闭设置">×</button>
+        </div>
+
+        <div class="setting-group">
+          <label for="apiKey">DeepSeek API Key</label>
+          <div class="key-row">
+            <input id="apiKey" type="password" placeholder="输入 sk- 开头的 API Key" autocomplete="off" />
+            <button id="testKeyButton" class="secondary-button compact" type="button">测试</button>
+          </div>
+          <p id="keyStatus" class="field-hint">密钥使用系统安全凭据存储（Windows 加密存储/macOS Keychain），不会写入转录文件。</p>
+        </div>
+
+        <div class="setting-group">
+          <label for="outputDirectory">文件保存位置</label>
+          <div class="key-row">
+            <input id="outputDirectory" type="text" readonly />
+            <button id="chooseDirectoryButton" class="secondary-button compact" type="button">选择</button>
+          </div>
+          <p class="field-hint">每期播客都会在这里创建独立文件夹；该目录同时作为本地知识库根目录。</p>
+        </div>
+
+        <div class="privacy-note">
+          <svg viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.6 3 8.8 7 10 4-1.2 7-5.4 7-10V6l-7-3Zm-1 12-3-3 1.4-1.4L11 12.2l3.6-3.6L16 10l-5 5Z"/></svg>
+          <div><strong>音频始终留在本机</strong><p>DeepSeek只接收节目元数据和转录后的文字。仅在勾选“联网核查专有名词”时搜索疑似错识名称，并把来源写入校正记录。</p></div>
+        </div>
+
+        <button id="saveSettingsButton" class="primary-button" type="button">保存设置</button>
+      </section>
+    </div>
+
+    <div id="toast" class="toast hidden" role="status"></div>
+    <script src="renderer.js"></script>
+  </body>
+</html>
