@@ -1,6 +1,6 @@
 {
   "name": "podcast-knowledge-transcriber",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Local-first podcast and video transcription desktop app with a personal knowledge base",
   "main": "src/main.js",
   "author": "Podcast Learning Transcriber contributors",

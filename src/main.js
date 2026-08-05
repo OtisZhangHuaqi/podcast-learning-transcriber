@@ -33,6 +33,7 @@ const { PauseController } = require('./services/pause-controller');
 const ffmpegStatic = require('ffmpeg-static');
 const { createBinaryLocator } = require('./platform/binaries');
 const { defaultOutputDirectory } = require('./platform/runtime');
+const { configureLogger, getLogDirectory, logError } = require('./services/logger');
 
 let mainWindow;
 let activeTask = null;
@@ -169,6 +170,7 @@ function publicTask(task) {
     etaSeconds: task.etaSeconds ?? null,
     result: task.result || null,
     error: task.error || null,
+    logPath: task.logPath || null,
     queuedAt: task.queuedAt,
     retryOf: task.retryOf || null,
     attempt: task.attempt || 1
@@ -586,6 +588,15 @@ async function processTaskQueue() {
     task.status = runtime.abortController.signal.aborted ? 'canceled' : 'failed';
     task.error = error.message;
     task.detail = error.message;
+    if (task.status === 'failed') {
+      task.logPath = logError('task', error, {
+        taskId: task.id,
+        taskType: task.type,
+        title: task.title,
+        stage: task.stage,
+        attempt: task.attempt
+      });
+    }
   } finally {
     sendTaskUpdate(task);
     activeTask = null;
@@ -649,26 +660,38 @@ function retryFailedTask(taskId) {
   return enqueueTask(descriptor.type, descriptor.payload, descriptor.title, descriptor);
 }
 
+function registerIpcHandler(channel, handler) {
+  ipcMain.handle(channel, async (...args) => {
+    try {
+      return await handler(...args);
+    } catch (error) {
+      logError(`ipc:${channel}`, error, { channel });
+      throw error;
+    }
+  });
+}
+
 app.whenReady().then(() => {
+  configureLogger(path.join(app.getPath('userData'), 'logs'));
   // Chromium's network stack follows the Windows proxy, certificate and DNS
   // configuration. Node's built-in fetch does not consistently do so.
   globalThis.fetch = (input, init) => net.fetch(input, init);
   configureFfmpeg(binaries().ffmpeg());
-  ipcMain.handle('settings:get', () => publicSettings());
-  ipcMain.handle('hardware:get', () => getHardwareProfile());
-  ipcMain.handle('settings:save', (_event, settings) => writeSettings(settings));
-  ipcMain.handle('deepseek:test', async (_event, apiKey) => testApiKey(apiKey || decryptKey()));
-  ipcMain.handle('dialog:output-directory', async () => {
+  registerIpcHandler('settings:get', () => publicSettings());
+  registerIpcHandler('hardware:get', () => getHardwareProfile());
+  registerIpcHandler('settings:save', (_event, settings) => writeSettings(settings));
+  registerIpcHandler('deepseek:test', async (_event, apiKey) => testApiKey(apiKey || decryptKey()));
+  registerIpcHandler('dialog:output-directory', async () => {
     const result = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory', 'createDirectory'] });
     return result.canceled ? null : result.filePaths[0];
   });
-  ipcMain.handle('podcast:inspect', async (_event, url) => resolveInput(url));
-  ipcMain.handle('task:enqueue', (_event, payload) => enqueueTask(
+  registerIpcHandler('podcast:inspect', async (_event, url) => resolveInput(url));
+  registerIpcHandler('task:enqueue', (_event, payload) => enqueueTask(
     'transcription',
     payload,
     payload.resolved?.episode?.title || payload.url
   ));
-  ipcMain.handle('task:enqueue-summary', (_event, sourceTaskId) => {
+  registerIpcHandler('task:enqueue-summary', (_event, sourceTaskId) => {
     const source = taskHistory.get(sourceTaskId);
     if (!source?.result?.transcriptPath) throw new Error('找不到可以生成纪要的转录结果');
     return enqueueTask(
@@ -677,22 +700,22 @@ app.whenReady().then(() => {
       `生成学习纪要：${source.result.resolved.episode.title}`
     );
   });
-  ipcMain.handle('task:list', () => [...taskHistory.values()].map(publicTask));
-  ipcMain.handle('task:cancel', (_event, taskId) => cancelQueuedTask(taskId));
-  ipcMain.handle('task:pause', (_event, taskId) => pauseQueuedTask(taskId));
-  ipcMain.handle('task:resume', (_event, taskId) => resumeQueuedTask(taskId));
-  ipcMain.handle('task:retry', (_event, taskId) => retryFailedTask(taskId));
-  ipcMain.handle('knowledge:stats', () => {
+  registerIpcHandler('task:list', () => [...taskHistory.values()].map(publicTask));
+  registerIpcHandler('task:cancel', (_event, taskId) => cancelQueuedTask(taskId));
+  registerIpcHandler('task:pause', (_event, taskId) => pauseQueuedTask(taskId));
+  registerIpcHandler('task:resume', (_event, taskId) => resumeQueuedTask(taskId));
+  registerIpcHandler('task:retry', (_event, taskId) => retryFailedTask(taskId));
+  registerIpcHandler('knowledge:stats', () => {
     const root = publicSettings().outputDirectory;
     const index = buildKnowledgeIndex(root);
     return { root, fileCount: index.fileCount, chunkCount: index.chunkCount, builtAt: index.builtAt };
   });
-  ipcMain.handle('knowledge:refresh', () => {
+  registerIpcHandler('knowledge:refresh', () => {
     const root = publicSettings().outputDirectory;
     const index = buildKnowledgeIndex(root, true);
     return { root, fileCount: index.fileCount, chunkCount: index.chunkCount, builtAt: index.builtAt };
   });
-  ipcMain.handle('knowledge:ask', async (_event, question) => {
+  registerIpcHandler('knowledge:ask', async (_event, question) => {
     const value = String(question || '').trim();
     if (!value) throw new Error('请输入要向知识库提出的问题');
     const settings = readSettingsFile();
@@ -721,8 +744,17 @@ app.whenReady().then(() => {
       stats: { root, fileCount: retrieval.index.fileCount, chunkCount: retrieval.index.chunkCount }
     };
   });
-  ipcMain.handle('shell:open-path', (_event, target) => shell.openPath(target));
+  registerIpcHandler('shell:open-path', (_event, target) => shell.openPath(target));
+  registerIpcHandler('logs:open-directory', () => shell.openPath(getLogDirectory()));
   createWindow();
+}).catch((error) => {
+  const logPath = logError('startup', error);
+  dialog.showErrorBox('播客转录助手启动失败', `${error.message}${logPath ? `\n\n错误日志：${logPath}` : ''}`);
+  app.quit();
+});
+
+process.on('unhandledRejection', (error) => {
+  logError('unhandled-rejection', error instanceof Error ? error : new Error(String(error)));
 });
 
 app.on('activate', () => {

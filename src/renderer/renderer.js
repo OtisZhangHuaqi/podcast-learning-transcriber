@@ -279,6 +279,7 @@ function renderTasks() {
     if (['pausing', 'paused'].includes(task.status)) actions.append(actionButton('继续', 'resume'));
     if (['queued', 'running', 'pausing', 'paused'].includes(task.status)) actions.append(actionButton('取消', 'cancel', true));
     if (task.status === 'failed') actions.append(actionButton('重试原任务', 'retry'));
+    if (task.status === 'failed' && task.logPath) actions.append(actionButton('打开错误日志', 'logs'));
     if (task.status === 'completed' && task.result?.outputDirectory) actions.append(actionButton('打开文件夹', 'open'));
     if (task.status === 'completed' && task.type === 'transcription' && !task.result?.summaryPath) {
       actions.append(actionButton('生成学习纪要', 'summary'));
@@ -478,6 +479,7 @@ $('taskList').addEventListener('click', async (event) => {
       showToast(`已按原链接和设置加入重试队列（第 ${retryTask.attempt} 次）`);
     }
     if (button.dataset.action === 'open') await window.podcastApp.openPath(task.result.outputDirectory);
+    if (button.dataset.action === 'logs') await window.podcastApp.openLogsDirectory();
     if (button.dataset.action === 'summary') {
       const summaryTask = await window.podcastApp.enqueueSummary(task.id);
       state.tasks.set(summaryTask.id, summaryTask);
