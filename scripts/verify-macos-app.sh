@@ -41,6 +41,13 @@ lipo -archs "$MAIN_EXECUTABLE" | grep -q arm64
 lipo -archs "$MAIN_EXECUTABLE" | grep -q x86_64
 file "$RES/darwin-arm64/whisper/whisper-cli" | grep -Eq 'arm64|universal binary'
 file "$RES/darwin-x64/whisper/whisper-cli" | grep -Eq 'x86_64|universal binary'
+for WHISPER in "$RES/darwin-arm64/whisper/whisper-cli" "$RES/darwin-x64/whisper/whisper-cli"; do
+  if otool -L "$WHISPER" | grep -Eq '@rpath/(libwhisper|libggml)|podcast-native-.*/whisper.cpp/build'; then
+    echo "Bundled whisper-cli has an unresolved build-time library reference: $WHISPER" >&2
+    otool -L "$WHISPER" >&2
+    exit 1
+  fi
+done
 codesign --verify --deep --strict --verbose=2 "$APP"
 
 if find "$RES/darwin-arm64" "$RES/darwin-x64" -name '*.exe' | grep -q .; then

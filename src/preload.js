@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('podcastApp', {
   refreshKnowledge: () => ipcRenderer.invoke('knowledge:refresh'),
   askKnowledge: (question) => ipcRenderer.invoke('knowledge:ask', question),
   openPath: (path) => ipcRenderer.invoke('shell:open-path', path),
+  openLogsDirectory: () => ipcRenderer.invoke('logs:open-directory'),
   onProgress: (callback) => {
     const handler = (_event, value) => callback(value);
     ipcRenderer.on('task:progress', handler);

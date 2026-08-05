@@ -93,10 +93,34 @@ function runProcess(command, args, handlers = {}) {
       stderr += text;
       handlers.onOutput?.(text, 'stderr');
     });
-    child.on('error', reject);
-    child.on('close', (code) => {
+    child.on('error', (cause) => {
+      const error = new Error(`${handlers.errorMessage || '无法启动处理程序'}\n${cause.message}`);
+      error.code = cause.code || 'PROCESS_SPAWN_FAILED';
+      error.cause = cause;
+      error.processDetails = {
+        executable: path.basename(command),
+        event: 'spawn',
+        code: cause.code || null
+      };
+      reject(error);
+    });
+    child.on('close', (code, signal) => {
       if (code === 0) resolve({ stdout, stderr });
-      else reject(new Error(handlers.errorMessage || `处理程序退出，错误码 ${code}\n${stderr.slice(-800)}`));
+      else {
+        const diagnostic = stderr.trim().slice(-12000) || stdout.trim().slice(-12000) || '子进程没有输出诊断信息';
+        const status = signal ? `信号 ${signal}` : `退出码 ${code}`;
+        const error = new Error(`${handlers.errorMessage || '处理程序执行失败'}（${status}）\n${diagnostic}`);
+        error.code = 'PROCESS_EXIT_FAILED';
+        error.processDetails = {
+          executable: path.basename(command),
+          event: 'close',
+          exitCode: code,
+          signal: signal || null,
+          stderrTail: stderr.slice(-12000),
+          stdoutTail: stdout.slice(-4000)
+        };
+        reject(error);
+      }
     });
   });
 }
@@ -198,7 +222,15 @@ async function transcribe({ whisperExecutable, modelPath, wavPath, outputPrefix,
       });
     }
   });
-  return { txt: `${outputPrefix}.txt`, srt: `${outputPrefix}.srt` };
+  const outputs = { txt: `${outputPrefix}.txt`, srt: `${outputPrefix}.srt` };
+  for (const [format, file] of Object.entries(outputs)) {
+    if (!fs.existsSync(file) || fs.statSync(file).size === 0) {
+      const error = new Error(`本地 Whisper 未生成有效的 ${format.toUpperCase()} 文件：${file}`);
+      error.code = 'WHISPER_OUTPUT_MISSING';
+      throw error;
+    }
+  }
+  return outputs;
 }
 
 function parseSrtTimestamp(value) {
@@ -320,6 +352,7 @@ module.exports = {
   locateFfmpeg,
   mergePartSubtitles,
   probeDuration,
+  runProcess,
   transcribe,
   transcribeSegmented
 };
