@@ -34,6 +34,7 @@ const ffmpegStatic = require('ffmpeg-static');
 const { createBinaryLocator } = require('./platform/binaries');
 const { defaultOutputDirectory } = require('./platform/runtime');
 const { configureLogger, getLogDirectory, logError } = require('./services/logger');
+const { createSessionCredentialCache } = require('./services/credential-cache');
 
 let mainWindow;
 let activeTask = null;
@@ -42,6 +43,7 @@ const taskHistory = new Map();
 let taskSequence = 0;
 let cachedHardwareProfile = null;
 let binaryLocator = null;
+const apiKeySessionCache = createSessionCredentialCache(process.platform);
 
 function binaries() {
   if (!binaryLocator) binaryLocator = createBinaryLocator({
@@ -119,7 +121,9 @@ function decryptKey(settings = readSettingsFile()) {
   if (!settings.apiKeyEncrypted) return '';
   try {
     if (!safeStorage.isEncryptionAvailable()) return '';
-    return safeStorage.decryptString(Buffer.from(settings.apiKeyEncrypted, 'base64'));
+    return apiKeySessionCache.decrypt(settings.apiKeyEncrypted, (encryptedValue) => (
+      safeStorage.decryptString(Buffer.from(encryptedValue, 'base64'))
+    ));
   } catch {
     return '';
   }
@@ -148,6 +152,7 @@ function writeSettings(input) {
   if (input.apiKey) {
     if (!safeStorage.isEncryptionAvailable()) throw new Error('当前系统无法使用安全凭据存储，API Key 未保存');
     next.apiKeyEncrypted = safeStorage.encryptString(input.apiKey.trim()).toString('base64');
+    apiKeySessionCache.remember(next.apiKeyEncrypted, input.apiKey.trim());
   }
   ensureDirectory(path.dirname(settingsPath()));
   fs.writeFileSync(settingsPath(), JSON.stringify(next, null, 2), 'utf8');
