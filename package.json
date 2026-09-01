@@ -15,7 +15,7 @@
     "build:mac:dir": "electron-builder --mac --universal --dir"
   },
   "dependencies": {
-    "fast-xml-parser": "^5.2.5",
+    "fast-xml-parser": "^5.11.1",
     "ffmpeg-static": "^5.2.0"
   },
   "devDependencies": {
